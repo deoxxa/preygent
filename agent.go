@@ -230,15 +230,45 @@ func (a *Agent) Step() {
 func (a *Agent) Mutate(generation int) *Agent {
 	n := NewAgent(a.World, generation)
 
-	c, _ := gopush.ParseCode(a.code.String())
-
-	for i := 0; i < len(c.List); i++ {
-		if rand.Intn(10) >= 9 {
-			c.List[i] = a.interp.RandomCode(5)
-		}
-	}
-
-	n.code = c
+	n.code = compactCode(mutateCode(a.interp, copyCode(a.code)))
 
 	return n
+}
+
+func mutateCode(interp *gopush.Interpreter, c gopush.Code) gopush.Code {
+	for i := 0; i < len(c.List); i++ {
+		c.List[i] = mutateCode(interp, c.List[i])
+	}
+
+	if rand.Intn(100) > 95 {
+		return interp.RandomCode(5)
+	}
+
+	return c
+}
+
+func compactCode(c gopush.Code) gopush.Code {
+	for len(c.List) == 1 {
+		c = c.List[0]
+	}
+
+	for i := 0; i < len(c.List); i++ {
+		c.List[i] = compactCode(c.List[i])
+	}
+
+	return c
+}
+
+func copyCode(c gopush.Code) gopush.Code {
+	if len(c.List) == 0 {
+		return c
+	}
+
+	list := make([]gopush.Code, len(c.List))
+
+	for i, v := range c.List {
+		list[i] = copyCode(v)
+	}
+
+	return c
 }
