@@ -32,7 +32,9 @@ func main() {
 	for {
 		g++
 
-		// fmt.Printf("running generation %d\n", g)
+		if g%100 == 0 {
+			fmt.Printf("running generation %d\n", g)
+		}
 
 		w.Reset()
 
