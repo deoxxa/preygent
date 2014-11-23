@@ -67,13 +67,13 @@ func main() {
 			fmt.Printf("%s\n", w.agents[0].code)
 			fmt.Printf("\n")
 
-			if len(w.lines) > 0 {
-				for _, l := range w.lines {
-					fmt.Println(l)
-				}
+			// if len(w.lines) > 0 {
+			// 	for _, l := range w.lines {
+			// 		fmt.Println(l)
+			// 	}
 
-				fmt.Printf("\n")
-			}
+			// 	fmt.Printf("\n")
+			// }
 
 			if err := ioutil.WriteFile("best.push", []byte(w.agents[0].code.String()), 0644); err != nil {
 				panic(err)
