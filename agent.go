@@ -55,9 +55,7 @@ type Agent struct {
 }
 
 func NewAgent(w *World, g int) *Agent {
-	a := &Agent{
-		Points: 5,
-	}
+	a := &Agent{}
 
 	a.Id = uuid.New()
 	a.World = w
@@ -179,6 +177,8 @@ func NewAgent(w *World, g int) *Agent {
 	a.interp.RegisterStack("preygent", &stack)
 
 	a.code = a.interp.RandomCode(20)
+
+	a.Reset()
 
 	return a
 }
