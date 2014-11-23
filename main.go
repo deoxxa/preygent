@@ -17,10 +17,10 @@ func main() {
 
 	bestAgents := []*Agent{}
 
-	if program, err := ioutil.ReadFile("best.push"); err != nil {
-		if !os.IsNotExist(err) {
-			panic(err)
-		}
+	if program, err := ioutil.ReadFile("best.push"); os.IsNotExist(err) {
+		bestAgents = append(bestAgents, NewAgent(w, 0))
+	} else if err != nil {
+		panic(err)
 	} else {
 		bestAgent := NewAgent(w, 0)
 		if err := bestAgent.Load(string(program)); err != nil {
