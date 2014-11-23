@@ -7,10 +7,10 @@ import (
 type World struct {
 	Debug bool
 
-	agents []*Agent
-	active bool
-	ticks  int
-	lines  []string
+	agents     []*Agent
+	active     bool
+	iterations int
+	lines      []string
 }
 
 func NewWorld(debug bool) *World {
@@ -29,7 +29,7 @@ func (w *World) AddAgent(a *Agent) {
 
 func (w *World) Reset() {
 	w.agents = []*Agent{}
-	w.ticks = 0
+	w.iterations = 0
 	w.lines = []string{}
 }
 
@@ -45,7 +45,7 @@ func (w *World) Step() bool {
 		a.Step()
 	}
 
-	w.ticks++
+	w.iterations++
 
 	return w.active
 }

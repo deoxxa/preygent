@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"math/rand"
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/DataWraith/gopush"
@@ -63,9 +64,27 @@ func NewAgent(w *World, g int) *Agent {
 	a.Generation = g
 	a.interp = gopush.NewInterpreter(gopush.DefaultOptions)
 	a.interp.Options.EvalPushLimit = 100
+	a.interp.Options.TopLevelPopCode = true
 
 	stack := gopush.Stack{
 		Functions: map[string]func(){
+			"forward": func() {
+				a.X, a.Y = a.FocusAt(1)
+
+				a.World.active = true
+			},
+			"left": func() {
+				a.Direction -= 1
+				if a.Direction < North {
+					a.Direction = West
+				}
+			},
+			"right": func() {
+				a.Direction += 1
+				if a.Direction > West {
+					a.Direction = North
+				}
+			},
 			"move": func() {
 				if !a.interp.StackOK("integer", 1) {
 					return
@@ -73,7 +92,7 @@ func NewAgent(w *World, g int) *Agent {
 
 				distance := a.interp.Stacks["integer"].Pop().(int)
 
-				a.World.Debugf("[%04d][%s] move %d (%d) %s", a.World.ticks, a.Id, distance, a.Points, DirectionNames[a.Direction])
+				a.World.Debugf("[%04d][%s] move %d (%d) %s", a.World.iterations, a.Id, distance, a.Points, DirectionNames[a.Direction])
 
 				if distance > a.Points {
 					distance = a.Points
@@ -98,9 +117,7 @@ func NewAgent(w *World, g int) *Agent {
 					a.Direction = North
 				}
 
-				a.World.Debugf("[%04d][%s] turned from %s to %s", a.World.ticks, a.Id, DirectionNames[pd], DirectionNames[a.Direction])
-
-				a.World.active = true
+				a.World.Debugf("[%04d][%s] turned from %s to %s", a.World.iterations, a.Id, DirectionNames[pd], DirectionNames[a.Direction])
 			},
 			"nearest": func() {
 				nearest := int(100000000)
@@ -131,10 +148,6 @@ func NewAgent(w *World, g int) *Agent {
 					points += o.Points
 				}
 
-				if points != 0 {
-					a.World.Debugf("[%04d][%s] found %d points at %d,%d", a.World.ticks, a.Id, points, x, y)
-				}
-
 				a.interp.Stacks["integer"].Push(points)
 			},
 			"consume": func() {
@@ -148,7 +161,7 @@ func NewAgent(w *World, g int) *Agent {
 					}
 
 					if o.Points > 0 {
-						a.World.Debugf("[%04d][%s] (%d) consuming %s (%d)", a.World.ticks, a.Id, a.Points, o.Id, o.Points)
+						a.World.Debugf("[%04d][%s] (%d) consuming %s (%d)", a.World.iterations, a.Id, a.Points, o.Id, o.Points)
 
 						o.Points--
 						a.Points++
@@ -168,6 +181,16 @@ func NewAgent(w *World, g int) *Agent {
 	a.code = a.interp.RandomCode(20)
 
 	return a
+}
+
+func (a *Agent) Load(program string) error {
+	if code, err := gopush.ParseCode(program); err != nil {
+		return err
+	} else {
+		a.code = code
+	}
+
+	return nil
 }
 
 func (a *Agent) FocusAt(distance int) (int, int) {
@@ -191,7 +214,7 @@ func (a *Agent) Reset() *Agent {
 	a.X = 0
 	a.Y = 0
 	a.Direction = North
-	a.Points = 5
+	a.Points = 100
 
 	for _, s := range a.interp.Stacks {
 		s.Flush()
@@ -202,4 +225,20 @@ func (a *Agent) Reset() *Agent {
 
 func (a *Agent) Step() {
 	a.interp.RunCode(a.code)
+}
+
+func (a *Agent) Mutate(generation int) *Agent {
+	n := NewAgent(a.World, generation)
+
+	c, _ := gopush.ParseCode(a.code.String())
+
+	for i := 0; i < len(c.List); i++ {
+		if rand.Intn(10) >= 9 {
+			c.List[i] = a.interp.RandomCode(5)
+		}
+	}
+
+	n.code = c
+
+	return n
 }
