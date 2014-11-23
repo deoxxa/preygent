@@ -32,31 +32,37 @@ func (l AgentList) Less(a, b int) bool {
 		return true
 	} else if l[a].Points < l[b].Points {
 		return false
+	} else if l[a].Generation < l[b].Generation {
+		return true
+	} else if l[a].Generation > l[b].Generation {
+		return false
 	} else {
 		return l[a].code.Length < l[b].code.Length
 	}
 }
 
 type Agent struct {
-	Id        string
-	World     *World
-	X, Y      int
-	Direction Direction
-	Points    int
+	Id         string
+	World      *World
+	Generation int
+	X, Y       int
+	Direction  Direction
+	Points     int
 
 	interp *gopush.Interpreter
 	code   gopush.Code
 }
 
-func NewAgent(w *World) *Agent {
+func NewAgent(w *World, g int) *Agent {
 	a := &Agent{
 		Points: 5,
 	}
 
 	a.Id = uuid.New()
 	a.World = w
+	a.Generation = g
 	a.interp = gopush.NewInterpreter(gopush.DefaultOptions)
-	a.interp.Options.EvalPushLimit = 10000
+	a.interp.Options.EvalPushLimit = 100
 
 	stack := gopush.Stack{
 		Functions: map[string]func(){
@@ -67,24 +73,13 @@ func NewAgent(w *World) *Agent {
 
 				distance := a.interp.Stacks["integer"].Pop().(int)
 
-				if a.World.Debug {
-					fmt.Printf("[%s] move %d (%d) %s\n", a.Id, distance, a.Points, DirectionNames[a.Direction])
-				}
+				a.World.Debugf("[%04d][%s] move %d (%d) %s", a.World.ticks, a.Id, distance, a.Points, DirectionNames[a.Direction])
 
 				if distance > a.Points {
 					distance = a.Points
 				}
 
-				switch a.Direction {
-				case North:
-					a.Y += distance
-				case South:
-					a.Y -= distance
-				case East:
-					a.X += distance
-				case West:
-					a.X -= distance
-				}
+				a.X, a.Y = a.FocusAt(distance)
 
 				a.World.active = true
 			},
@@ -103,14 +98,29 @@ func NewAgent(w *World) *Agent {
 					a.Direction = North
 				}
 
-				if a.World.Debug {
-					fmt.Printf("[%s] turned from %s to %s\n", a.Id, DirectionNames[pd], DirectionNames[a.Direction])
-				}
+				a.World.Debugf("[%04d][%s] turned from %s to %s", a.World.ticks, a.Id, DirectionNames[pd], DirectionNames[a.Direction])
 
 				a.World.active = true
 			},
+			"nearest": func() {
+				nearest := int(100000000)
+
+				for _, o := range w.agents {
+					x, y := math.Abs(float64(a.X-o.X)), math.Abs(float64(a.Y-o.Y))
+
+					distance := int(math.Sqrt(x*x + y*y))
+
+					if distance < nearest {
+						nearest = distance
+					}
+				}
+
+				a.interp.Stacks["integer"].Push(nearest)
+			},
 			"available": func() {
-				others := w.AgentsAt(a.X, a.Y)
+				x, y := a.FocusAt(1)
+
+				others := w.AgentsAt(x, y)
 
 				points := 0
 				for _, o := range others {
@@ -122,15 +132,15 @@ func NewAgent(w *World) *Agent {
 				}
 
 				if points != 0 {
-					if a.World.Debug {
-						fmt.Printf("[%s] found %d available points\n", a.Id, points)
-					}
+					a.World.Debugf("[%04d][%s] found %d points at %d,%d", a.World.ticks, a.Id, points, x, y)
 				}
 
 				a.interp.Stacks["integer"].Push(points)
 			},
 			"consume": func() {
-				others := w.AgentsAt(a.X, a.Y)
+				x, y := a.FocusAt(1)
+
+				others := w.AgentsAt(x, y)
 
 				for _, o := range others {
 					if o == a {
@@ -138,18 +148,16 @@ func NewAgent(w *World) *Agent {
 					}
 
 					if o.Points > 0 {
-						if a.World.Debug {
-							fmt.Printf("[%s] (%d points) is consuming a point from %s (%d points)\n", a.Id, a.Points, o.Id, o.Points)
-						}
+						a.World.Debugf("[%04d][%s] (%d) consuming %s (%d)", a.World.ticks, a.Id, a.Points, o.Id, o.Points)
 
 						o.Points--
 						a.Points++
 
+						a.World.active = true
+
 						break
 					}
 				}
-
-				a.World.active = true
 			},
 		},
 	}
@@ -160,6 +168,23 @@ func NewAgent(w *World) *Agent {
 	a.code = a.interp.RandomCode(20)
 
 	return a
+}
+
+func (a *Agent) FocusAt(distance int) (int, int) {
+	x, y := a.X, a.Y
+
+	switch a.Direction {
+	case East:
+		x += distance
+	case West:
+		x -= distance
+	case North:
+		y += distance
+	case South:
+		y -= distance
+	}
+
+	return x, y
 }
 
 func (a *Agent) Reset() *Agent {

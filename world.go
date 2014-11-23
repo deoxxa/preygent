@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 )
 
 type World struct {
@@ -11,12 +10,17 @@ type World struct {
 	agents []*Agent
 	active bool
 	ticks  int
+	lines  []string
 }
 
 func NewWorld(debug bool) *World {
 	return &World{
 		Debug: debug,
 	}
+}
+
+func (w *World) Debugf(format string, v ...interface{}) {
+	w.lines = append(w.lines, fmt.Sprintf(format, v...))
 }
 
 func (w *World) AddAgent(a *Agent) {
@@ -26,6 +30,7 @@ func (w *World) AddAgent(a *Agent) {
 func (w *World) Reset() {
 	w.agents = []*Agent{}
 	w.ticks = 0
+	w.lines = []string{}
 }
 
 func (w *World) Step() bool {
@@ -41,11 +46,6 @@ func (w *World) Step() bool {
 	}
 
 	w.ticks++
-
-	if w.Debug {
-		fmt.Printf("\n")
-		time.Sleep(time.Second)
-	}
 
 	return w.active
 }
