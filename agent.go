@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"math/rand"
+	"math"
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/DataWraith/gopush"
@@ -164,8 +163,8 @@ func NewAgent(w *World) *Agent {
 }
 
 func (a *Agent) Reset() *Agent {
-	a.X = rand.Intn(10)
-	a.Y = rand.Intn(10)
+	a.X = 0
+	a.Y = 0
 	a.Direction = North
 	a.Points = 5
 
