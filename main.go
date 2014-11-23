@@ -80,6 +80,10 @@ func main() {
 			}
 		}
 
-		bestAgents = w.agents[0:25]
+		if len(w.agents) >= 10 {
+			bestAgents = w.agents[0:10]
+		} else {
+			bestAgents = w.agents[:]
+		}
 	}
 }
